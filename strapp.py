@@ -1,9 +1,18 @@
 import streamlit as st
 from indexer import Indexer
-from catalog import Catalog
+from catalog import Catalog, Item
+from whoosh.writing import BufferedWriter
+import os
+
+os.makedirs("indexdir", exist_ok=True)
 
 catalog = Catalog()
 indexer = Indexer()
+
+catalog.add_item(Item("Dummy 1", {"Mega haul"}))
+catalog.add_item(Item("Dummy 2", {"Intense orange yellow pigment"}))
+
+writer = BufferedWriter(indexer.index, period=120, limit=20)
 
 st.title('My Catalog App')
 
@@ -18,9 +27,15 @@ name = st.text_input('Name')
 desc = st.text_area('Description')
 if st.button('Add'):
   item = Item(name, desc) 
-  indexer.index_item(item)
-  catalog.add_item(item)
-  st.success('Item added!')
+  try:
+    writer.lock()
+    indexer.index_item(item)
+    catalog.add_item(item)
+    st.success('Item added!')
+    writer.commit()
+  finally:
+    writer.unlock()
+
 
 # Update item
 items = {item.id: item.name for item in catalog.items}
@@ -29,10 +44,14 @@ name = st.text_input('New name', value=catalog.get_item(selected_id).name)
 desc = st.text_area('New description', value=catalog.get_item(selected_id).desc)
 if st.button('Update'):
   item = catalog.get_item(selected_id)
-  item.name = name
-  item.desc = desc
-  indexer.update_item(item)
-  st.success('Item updated!')
+  if item:
+    name = st.text_input("New name", value=item.name)
+    item.name = name
+    item.desc = desc
+    indexer.update_item(item)
+    st.success('Item updated!')
+  else:
+    st.warning("Item not found")
 
 # Delete item
 selected_id = st.selectbox('Select item to delete', options=items.keys())
