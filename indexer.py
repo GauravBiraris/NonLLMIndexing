@@ -23,14 +23,16 @@ class Indexer:
     writer.commit()
 
   def index_item(self, writer, item):
-    tokens = self.tokenize(item.data)
+    tokens = self.tokenize(item.data["name"])
     indexes = self.map_to_indexes(tokens)
     self.annoy.add_item(item.id, indexes) 
     self.graph.add_node(item.id)
     writer.add_document(id=item.id, text=str(indexes))
 
   def tokenize(self, text):
-    return nltk.word_tokenize(text.lower())   
+    if isinstance(text, dict):
+      text = str(text)
+    return nltk.word_tokenize(text.lower()) 
 
   def map_to_indexes(self, tokens):
     indexes = []
@@ -38,7 +40,8 @@ class Indexer:
       synsets = self.wordnet.synsets(token)
       lemmas = set() 
       for synset in synsets:
-        lemmas.update(synset.lemma_names())
+        lemmas = list(lemmas)
+        lemmas.extend(list(synset.lemma_names()))        
 
       if len(lemmas) > 1:  
         index = token + '_' + str(len(indexes))  
@@ -50,6 +53,8 @@ class Indexer:
     return indexes
   
   def search(self, query):
+    if isinstance(query, dict):
+      query = str(query)
     tokens = self.tokenize(query)
     indexes = self.map_indexes(tokens)
     results = [hit['id'] for hit in self.index.searcher().search(indexes)]
@@ -65,7 +70,9 @@ class Indexer:
       synsets = self.wordnet.synsets(token)
       lemmas = set()
       for synset in synsets:
-        lemmas.update(synset.lemma_names())
+        lemmas = list(lemmas)
+        lemmas.extend(list(synset.lemma_names()))
+
 
       if len(lemmas) > 1:
         related = [i for i in indexes if i.startswith(token)]  
