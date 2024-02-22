@@ -4,7 +4,7 @@ import networkx as nx
 from whoosh.fields import Schema, TEXT, ID
 from whoosh.index import create_in
 from annoy import AnnoyIndex
-from pydictionary import PyDictionary
+from PyDictionary import PyDictionary
 
 class Indexer:
 
