@@ -3,4 +3,4 @@ nltk
 networkx
 whoosh
 annoy
-pydictionary
+PyDictionary
